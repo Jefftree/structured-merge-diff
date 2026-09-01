@@ -77,13 +77,10 @@ func (errs ValidationErrors) WithPrefix(prefix string) ValidationErrors {
 // This is useful when unwinding the stack on errors. Prefix is
 // computed lazily only if there is an error.
 func (errs ValidationErrors) WithLazyPrefix(fn func() string) ValidationErrors {
-	if len(errs) == 0 {
+	if len(errs) == 0 || fn == nil {
 		return errs
 	}
-	prefix := ""
-	if fn != nil {
-		prefix = fn()
-	}
+	prefix := fn()
 	for i := range errs {
 		errs[i].Path = prefix + errs[i].Path
 	}
