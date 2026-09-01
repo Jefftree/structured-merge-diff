@@ -101,6 +101,30 @@ func dereference(val reflect.Value) reflect.Value {
 	return val
 }
 
+// SameUnderlying reports whether a and b are backed by the same slice or map, and
+// so are necessarily equal. False means nothing: use it only to skip an equality
+// check, never to conclude that two values differ.
+func SameUnderlying(a, b Value) bool {
+	ar, ok := a.(*valueReflect)
+	if !ok {
+		return false
+	}
+	br, ok := b.(*valueReflect)
+	if !ok {
+		return false
+	}
+	if ar.kind != br.kind || ar.Value.Type() != br.Value.Type() {
+		return false
+	}
+	switch ar.kind {
+	case listType, byteStringType:
+		return ar.Value.Pointer() == br.Value.Pointer() && ar.Value.Len() == br.Value.Len()
+	case mapType:
+		return ar.Value.Pointer() == br.Value.Pointer()
+	}
+	return false
+}
+
 type valueReflect struct {
 	ParentMap    *reflect.Value
 	ParentMapKey *reflect.Value

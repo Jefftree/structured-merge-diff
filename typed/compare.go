@@ -114,6 +114,10 @@ func (w *compareWalker) compare(prefixFn func() string) (errs ValidationErrors) 
 		return errorf("schema error: no type found matching: %v", *w.typeRef.NamedType)
 	}
 
+	if value.SameUnderlying(w.lhs, w.rhs) {
+		return nil
+	}
+
 	alhs := deduceAtom(a, w.lhs)
 	arhs := deduceAtom(a, w.rhs)
 
