@@ -20,6 +20,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"reflect"
+	"sync/atomic"
 )
 
 // NewValueReflect creates a Value backed by an "interface{}" type,
@@ -104,7 +105,21 @@ func dereference(val reflect.Value) reflect.Value {
 // SameUnderlying reports whether a and b are backed by the same slice or map, and
 // so are necessarily equal. False means nothing: use it only to skip an equality
 // check, never to conclude that two values differ.
+// SameUnderlyingCalls and SameUnderlyingHits are temporary instrumentation, not
+// part of the proposed change. Read them to find out whether the shortcut ever
+// fires on a real apiserver request path.
+var SameUnderlyingCalls, SameUnderlyingHits atomic.Int64
+
 func SameUnderlying(a, b Value) bool {
+	SameUnderlyingCalls.Add(1)
+	if r := sameUnderlying(a, b); r {
+		SameUnderlyingHits.Add(1)
+		return true
+	}
+	return false
+}
+
+func sameUnderlying(a, b Value) bool {
 	ar, ok := a.(*valueReflect)
 	if !ok {
 		return false
