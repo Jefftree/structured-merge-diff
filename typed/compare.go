@@ -131,9 +131,9 @@ func (w *compareWalker) compare(prefixFn func() string) (errs ValidationErrors) 
 
 	if !w.inLeaf {
 		if w.lhs == nil {
-			w.comparison.Added.Insert(w.path)
+			w.comparison.Added.InsertLazy(w.path)
 		} else if w.rhs == nil {
-			w.comparison.Removed.Insert(w.path)
+			w.comparison.Removed.InsertLazy(w.path)
 		}
 	}
 	return errs.WithLazyPrefix(prefixFn)
@@ -151,13 +151,13 @@ func (w *compareWalker) doLeaf() {
 
 	// We don't recurse into leaf fields for merging.
 	if w.lhs == nil {
-		w.comparison.Added.Insert(w.path)
+		w.comparison.Added.InsertLazy(w.path)
 	} else if w.rhs == nil {
-		w.comparison.Removed.Insert(w.path)
+		w.comparison.Removed.InsertLazy(w.path)
 	} else if !value.EqualsUsing(w.allocator, w.rhs, w.lhs) {
 		// TODO: Equality is not sufficient for this.
 		// Need to implement equality check on the value type.
-		w.comparison.Modified.Insert(w.path)
+		w.comparison.Modified.InsertLazy(w.path)
 	}
 }
 

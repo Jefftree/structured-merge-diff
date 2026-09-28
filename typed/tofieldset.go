@@ -51,8 +51,9 @@ type toFieldSetWalker struct {
 	schema  *schema.Schema
 	typeRef schema.TypeRef
 
-	set  *fieldpath.Set
-	path fieldpath.Path
+	set    *fieldpath.Set
+	path   fieldpath.Path
+	inLeaf bool
 
 	// Allocate only as many walkers as needed for the depth by storing them here.
 	spareWalkers *[]*toFieldSetWalker
@@ -88,7 +89,8 @@ func (v *toFieldSetWalker) toFieldSet() ValidationErrors {
 }
 
 func (v *toFieldSetWalker) doScalar(t *schema.Scalar) ValidationErrors {
-	v.set.Insert(v.path)
+	v.inLeaf = true
+	v.set.InsertLazy(v.path)
 
 	return nil
 }
@@ -122,8 +124,9 @@ func (v *toFieldSetWalker) visitListItems(t *schema.List, list value.List) (errs
 		v2 := v.prepareDescent(pe, t.ElementType)
 		v2.value = child
 		errs = append(errs, v2.toFieldSet()...)
-
-		v2.set.Insert(v2.path)
+		if !v2.inLeaf {
+			v2.set.InsertLazy(v2.path)
+		}
 		v.finishDescent(v2)
 	}
 	return errs
@@ -135,6 +138,7 @@ func (v *toFieldSetWalker) doList(t *schema.List) (errs ValidationErrors) {
 		defer v.allocator.Free(list)
 	}
 	if t.ElementRelationship == schema.Atomic {
+		v.inLeaf = true
 		v.set.Insert(v.path)
 		return nil
 	}
@@ -159,10 +163,12 @@ func (v *toFieldSetWalker) visitMapItems(t *schema.Map, m value.Map) (errs Valid
 		v2 := v.prepareDescent(pe, tr)
 		v2.value = val
 		errs = append(errs, v2.toFieldSet()...)
-		if val.IsNull() || (val.IsMap() && val.AsMap().Length() == 0) {
-			v2.set.Insert(v2.path)
-		} else if _, ok := t.FindField(key); !ok {
-			v2.set.Insert(v2.path)
+		if !v2.inLeaf {
+			if val.IsNull() || (val.IsMap() && val.AsMap().Length() == 0) {
+				v2.set.InsertLazy(v2.path)
+			} else if _, ok := t.FindField(key); !ok {
+				v2.set.InsertLazy(v2.path)
+			}
 		}
 		v.finishDescent(v2)
 		return true
@@ -176,6 +182,7 @@ func (v *toFieldSetWalker) doMap(t *schema.Map) (errs ValidationErrors) {
 		defer v.allocator.Free(m)
 	}
 	if t.ElementRelationship == schema.Atomic {
+		v.inLeaf = true
 		v.set.Insert(v.path)
 		return nil
 	}

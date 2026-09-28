@@ -125,6 +125,7 @@ func (tv TypedValue) ToFieldSet() (*fieldpath.Set, error) {
 	if errs := w.toFieldSet(); len(errs) != 0 {
 		return nil, errs
 	}
+	w.set.EnsureSorted()
 	return w.set, nil
 }
 
@@ -192,6 +193,9 @@ func (tv TypedValue) Compare(rhs *TypedValue) (c *Comparison, err error) {
 	if len(errs) > 0 {
 		return nil, errs
 	}
+	cmpw.comparison.Removed.EnsureSorted()
+	cmpw.comparison.Modified.EnsureSorted()
+	cmpw.comparison.Added.EnsureSorted()
 	return cmpw.comparison, nil
 }
 

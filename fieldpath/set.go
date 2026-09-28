@@ -76,6 +76,31 @@ func (s *Set) Insert(p Path) {
 	}
 }
 
+// InsertLazy adds p to the set, deferring sorting once a leaf set reaches 1024 elements.
+func (s *Set) InsertLazy(p Path) {
+	for len(p) > 1 {
+		s = s.Children.Descend(p[0])
+		p = p[1:]
+	}
+	if len(p) == 1 {
+		if len(s.Members.members) < 1024 {
+			s.Members.Insert(p[0])
+		} else {
+			s.Members.members = append(s.Members.members, p[0])
+		}
+	}
+}
+
+// EnsureSorted sorts any member sets populated via InsertLazy.
+func (s *Set) EnsureSorted() {
+	if len(s.Members.members) > 1024 {
+		slices.SortFunc(s.Members.members, PathElement.Compare)
+	}
+	for i := range s.Children.members {
+		s.Children.members[i].set.EnsureSorted()
+	}
+}
+
 // Union returns a Set containing elements which appear in either s or s2.
 func (s *Set) Union(s2 *Set) *Set {
 	return &Set{
